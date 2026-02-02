@@ -1113,14 +1113,11 @@ fn main() {
             .include_paths
     };
 
-    if statik
-        && matches!(
-            env::var("CARGO_CFG_TARGET_OS").as_deref(),
-            Ok("macos") | Ok("ios")
-        )
-    {
-        let frameworks = vec![
-            "AppKit",
+    if statik {
+        let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+
+        // Common frameworks available on all Apple platforms
+        let common_frameworks = vec![
             "AudioToolbox",
             "AVFoundation",
             "CoreFoundation",
@@ -1129,16 +1126,30 @@ fn main() {
             "CoreServices",
             "CoreVideo",
             "Foundation",
-            "OpenCL",
-            "OpenGL",
-            "QTKit",
             "QuartzCore",
             "Security",
-            "VideoDecodeAcceleration",
             "VideoToolbox",
         ];
-        for f in frameworks {
-            println!("cargo:rustc-link-lib=framework={f}");
+
+        // macOS-only frameworks
+        let macos_frameworks = vec![
+            "AppKit",
+            "OpenCL",
+            "OpenGL",
+        ];
+
+        match target_os.as_str() {
+            "macos" => {
+                for f in common_frameworks.iter().chain(macos_frameworks.iter()) {
+                    println!("cargo:rustc-link-lib=framework={f}");
+                }
+            }
+            "ios" | "tvos" | "visionos" => {
+                for f in &common_frameworks {
+                    println!("cargo:rustc-link-lib=framework={f}");
+                }
+            }
+            _ => {}
         }
     }
 
